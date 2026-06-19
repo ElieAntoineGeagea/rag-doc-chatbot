@@ -24,16 +24,19 @@ The goal of this project is to build a local document chatbot that can:
 - PyPDF
 - python-dotenv
 - Git/GitHub
-
 ## Project Structure
 
 ```text
-rag-doc-chatbot/├── docs/
+rag-doc-chatbot/
+├── docs/
+│   └── demo_questions.md
+│
 ├── data/
 │   └── .gitkeep
 │
 ├── src/
 │   ├── __init__.py
+│   ├── app.py
 │   ├── check_env.py
 │   ├── load_documents.py
 │   ├── split_documents.py
@@ -42,18 +45,11 @@ rag-doc-chatbot/├── docs/
 │   └── query_data.py
 │
 ├── tests/
+│   └── test_chunk_ids.py
 │
 ├── .env.example
 ├── .gitignore
+├── pytest.ini
 ├── README.md
 └── requirements.txt
-
-
-
-
-## Demo Questions
-
-Example questions for testing the chatbot are available in:
-
-```text
-docs/demo_questions.md
+```
