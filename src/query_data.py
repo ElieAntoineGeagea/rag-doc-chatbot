@@ -1,6 +1,7 @@
 import argparse
 import os
 
+from dotenv import load_dotenv
 from langchain_chroma import Chroma
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
@@ -24,9 +25,13 @@ Answer:
 
 
 def query_rag(query_text):
+    load_dotenv()
+
     if not os.path.exists(CHROMA_PATH):
-        print("Chroma database not found. Please run create_database.py first.")
-        return
+        return {
+            "answer": "Chroma database not found. Run python src/create_database.py --reset first.",
+            "sources": [],
+        }
 
     embedding_function = get_embedding_function()
 
@@ -39,8 +44,10 @@ def query_rag(query_text):
     results = db.similarity_search_with_score(query_text, k=3)
 
     if not results:
-        print("No relevant results found.")
-        return
+        return {
+            "answer": "No relevant results found.",
+            "sources": [],
+        }
 
     context_text = "\n\n---\n\n".join(
         [doc.page_content for doc, _score in results]
@@ -60,14 +67,37 @@ def query_rag(query_text):
 
     response = model.invoke(prompt)
 
+    sources = []
+
+    for doc, score in results:
+        source_info = {
+            "source": doc.metadata.get("source", "Unknown source"),
+            "page": doc.metadata.get("page", "Unknown page"),
+            "id": doc.metadata.get("id", "No ID"),
+            "score": score,
+        }
+
+        sources.append(source_info)
+
+    return {
+        "answer": response.content,
+        "sources": sources,
+    }
+
+
+def print_result(result):
     print("Answer:")
-    print(response.content)
+    print(result["answer"])
 
     print("\nSources:")
-    for doc, score in results:
-        print(f"Source: {doc.metadata} | Score: {score}")
 
-    return response.content
+    for source in result["sources"]:
+        print(
+            f"Source: {source['source']} | "
+            f"Page: {source['page']} | "
+            f"ID: {source['id']} | "
+            f"Score: {source['score']}"
+        )
 
 
 if __name__ == "__main__":
@@ -81,4 +111,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    query_rag(args.query_text)
+    result = query_rag(args.query_text)
+
+    print_result(result)
