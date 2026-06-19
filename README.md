@@ -28,8 +28,7 @@ The goal of this project is to build a local document chatbot that can:
 ## Project Structure
 
 ```text
-rag-doc-chatbot/
-│
+rag-doc-chatbot/├── docs/
 ├── data/
 │   └── .gitkeep
 │
@@ -48,3 +47,13 @@ rag-doc-chatbot/
 ├── .gitignore
 ├── README.md
 └── requirements.txt
+
+
+
+
+## Demo Questions
+
+Example questions for testing the chatbot are available in:
+
+```text
+docs/demo_questions.md
