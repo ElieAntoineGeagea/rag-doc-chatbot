@@ -7,6 +7,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from question_router import route_question
 from query_rewriter import rewrite_query_for_retrieval
+from context_checker import check_context_sufficiency
 
 from get_embedding_function import get_embedding_function
 
@@ -112,12 +113,16 @@ def query_rag(query_text):
         )
 
         results = db.similarity_search_with_score(rewritten_query, k=3)
+        context_check = check_context_sufficiency(results, route)
 
-        if not results:
+        if not context_check["is_sufficient"]:
             return {
-                "answer": "No relevant results found.",
-                "sources": [],
-            }
+            "answer": f"I cannot answer reliably because: {context_check['reason']}",
+            "sources": [],
+            "route": route,
+            "rewritten_query": rewritten_query,
+            "context_check": context_check,
+        }
 
         context_text = "\n\n---\n\n".join(
             [doc.page_content for doc, _score in results]
@@ -153,6 +158,7 @@ def query_rag(query_text):
             "sources": sources,
             "route": route,
             "rewritten_query": rewritten_query,
+            "context_check": context_check,
         }
 
     except Exception as error:
@@ -168,6 +174,11 @@ def print_result(result):
     print(result["answer"])
     print(f"\nRoute: {result.get('route', 'N/A')}")
     print(f"Rewritten query: {result.get('rewritten_query', 'N/A')}")
+    context_check = result.get("context_check")
+
+    if context_check:
+        print(f"Context sufficient: {context_check['is_sufficient']}")
+        print(f"Context reason: {context_check['reason']}")
 
     print("\nSources:")
 
