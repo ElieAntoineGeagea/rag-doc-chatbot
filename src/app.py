@@ -57,6 +57,26 @@ if st.button("Clear chat"):
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.write(message["content"])
+        if message["role"] == "assistant" and message.get("agent_trace"):
+            agent_trace = message["agent_trace"]
+
+            with st.expander("Agentic RAG Trace"):
+                st.write(f"Route: `{agent_trace.get('route', 'N/A')}`")
+                st.write(f"Rewritten query: `{agent_trace.get('rewritten_query', 'N/A')}`")
+
+                planned_queries = agent_trace.get("planned_queries", [])
+
+                if planned_queries:
+                    st.markdown("**Planned retrieval queries:**")
+
+                    for index, query in enumerate(planned_queries, start=1):
+                        st.write(f"{index}. {query}")
+
+                context_check = agent_trace.get("context_check")
+
+                if context_check:
+                    st.write(f"Context sufficient: `{context_check['is_sufficient']}`")
+                    st.write(f"Context reason: {context_check['reason']}")
 
         if message["role"] == "assistant" and message.get("sources"):
             with st.expander("Sources"):
@@ -88,6 +108,24 @@ if question:
 
         st.write(result["answer"])
 
+        with st.expander("Agentic RAG Trace"):
+            st.write(f"Route: `{result.get('route', 'N/A')}`")
+            st.write(f"Rewritten query: `{result.get('rewritten_query', 'N/A')}`")
+
+            planned_queries = result.get("planned_queries", [])
+
+            if planned_queries:
+                st.markdown("**Planned retrieval queries:**")
+
+                for index, query in enumerate(planned_queries, start=1):
+                    st.write(f"{index}. {query}")
+
+            context_check = result.get("context_check")
+
+            if context_check:
+                st.write(f"Context sufficient: `{context_check['is_sufficient']}`")
+                st.write(f"Context reason: {context_check['reason']}")
+
         if result["sources"]:
             with st.expander("Sources"):
                 for index, source in enumerate(result["sources"], start=1):
@@ -104,5 +142,11 @@ if question:
             "role": "assistant",
             "content": result["answer"],
             "sources": result["sources"],
+            "agent_trace": {
+                "route": result.get("route"),
+                "rewritten_query": result.get("rewritten_query"),
+                "planned_queries": result.get("planned_queries", []),
+                "context_check": result.get("context_check"),
+            },
         }
     )
