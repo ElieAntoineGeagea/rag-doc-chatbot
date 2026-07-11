@@ -1,6 +1,6 @@
 def route_question(question):
     question_lower= question.lower()
-    
+
     if any(word in question_lower for word in ["summarize", "summary", " main points"]):
         return "summary"
 
@@ -8,7 +8,7 @@ def route_question(question):
         return "source_question"
 
     if any(word in question_lower for word in ["compare", "difference", "better", "more suitable"]):
-        return  " comparison"
+        return  "comparison"
     
     if question_lower.strip():
         return "general_rag"

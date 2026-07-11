@@ -6,6 +6,7 @@ from langchain_chroma import Chroma
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from question_router import route_question
+from query_rewriter import rewrite_query_for_retrieval
 
 from get_embedding_function import get_embedding_function
 
@@ -96,8 +97,10 @@ def query_rag(query_text):
             "answer": "Chroma database not found. Run python src/create_database.py --reset first.",
             "sources": [],
         }
+    
     route = route_question(query_text)
     selected_prompt_template = select_prompt_template(route)
+    rewritten_query = rewrite_query_for_retrieval(query_text)
 
     try:
         embedding_function = get_embedding_function()
@@ -108,7 +111,7 @@ def query_rag(query_text):
             embedding_function=embedding_function,
         )
 
-        results = db.similarity_search_with_score(query_text, k=3)
+        results = db.similarity_search_with_score(rewritten_query, k=3)
 
         if not results:
             return {
@@ -149,6 +152,7 @@ def query_rag(query_text):
             "answer": response.content,
             "sources": sources,
             "route": route,
+            "rewritten_query": rewritten_query,
         }
 
     except Exception as error:
@@ -162,6 +166,8 @@ def query_rag(query_text):
 def print_result(result):
     print("Answer:")
     print(result["answer"])
+    print(f"\nRoute: {result.get('route', 'N/A')}")
+    print(f"Rewritten query: {result.get('rewritten_query', 'N/A')}")
 
     print("\nSources:")
 

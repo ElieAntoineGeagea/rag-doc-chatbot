@@ -17,7 +17,7 @@ def rewrite_query_for_retrieval(question):
         return question
 
     return ""
-    
+
 
 if __name__ == "__main__":
     test_questions = [
@@ -29,8 +29,10 @@ if __name__ == "__main__":
     ]
 
     for question in test_questions:
+        route = route_question(question)
         rewritten_query = rewrite_query_for_retrieval(question)
 
         print(f"Original question: {question}")
+        print(f"Route: {route}")
         print(f"Rewritten query: {rewritten_query}")
         print("---")
