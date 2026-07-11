@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from langchain_chroma import Chroma
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
+from question_router import route_question
 
 from get_embedding_function import get_embedding_function
 
@@ -22,6 +23,63 @@ Question: {question}
 
 Answer:
 """
+SUMMARY_PROMPT_TEMPLATE = """
+Summarize the following document context clearly and concisely.
+
+Use only the provided context.
+
+Context:
+
+{context}
+
+Summary:
+"""
+
+
+SOURCE_PROMPT_TEMPLATE = """
+Answer the question using only the following context.
+
+Focus especially on where the information came from.
+
+Context:
+
+{context}
+
+---
+
+Question: {question}
+
+Answer:
+"""
+
+
+COMPARISON_PROMPT_TEMPLATE = """
+Answer the comparison question using only the following context.
+
+Compare the relevant information clearly.
+If the context is not enough to make a comparison, say that the provided context is insufficient.
+
+Context:
+
+{context}
+
+---
+
+Question: {question}
+
+Answer:
+"""
+def select_prompt_template(route):
+    if route == "summary":
+        return SUMMARY_PROMPT_TEMPLATE
+
+    if route == "source_question":
+        return SOURCE_PROMPT_TEMPLATE
+
+    if route == "comparison":
+        return COMPARISON_PROMPT_TEMPLATE
+
+    return PROMPT_TEMPLATE
 
 
 def query_rag(query_text):
@@ -38,6 +96,8 @@ def query_rag(query_text):
             "answer": "Chroma database not found. Run python src/create_database.py --reset first.",
             "sources": [],
         }
+    route = route_question(query_text)
+    selected_prompt_template = select_prompt_template(route)
 
     try:
         embedding_function = get_embedding_function()
@@ -60,8 +120,7 @@ def query_rag(query_text):
             [doc.page_content for doc, _score in results]
         )
 
-        prompt_template = ChatPromptTemplate.from_template(PROMPT_TEMPLATE)
-
+        prompt_template = ChatPromptTemplate.from_template(selected_prompt_template)
         prompt = prompt_template.format(
             context=context_text,
             question=query_text,
@@ -89,6 +148,7 @@ def query_rag(query_text):
         return {
             "answer": response.content,
             "sources": sources,
+            "route": route,
         }
 
     except Exception as error:
@@ -96,6 +156,7 @@ def query_rag(query_text):
             "answer": f"An error occurred while querying the RAG system: {error}",
             "sources": [],
         }
+
 
 
 def print_result(result):
