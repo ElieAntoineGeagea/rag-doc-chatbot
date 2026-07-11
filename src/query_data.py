@@ -8,6 +8,7 @@ from langchain_openai import ChatOpenAI
 from question_router import route_question
 from query_rewriter import rewrite_query_for_retrieval
 from context_checker import check_context_sufficiency
+from retrieval_planner import plan_retrieval_queries
 
 from get_embedding_function import get_embedding_function
 
@@ -102,6 +103,7 @@ def query_rag(query_text):
     route = route_question(query_text)
     selected_prompt_template = select_prompt_template(route)
     rewritten_query = rewrite_query_for_retrieval(query_text)
+    planned_queries = plan_retrieval_queries(query_text)
 
     try:
         embedding_function = get_embedding_function()
@@ -112,7 +114,24 @@ def query_rag(query_text):
             embedding_function=embedding_function,
         )
 
-        results = db.similarity_search_with_score(rewritten_query, k=3)
+        results = []
+        seen_ids = set()
+
+        for retrieval_query in planned_queries:
+            query_results = db.similarity_search_with_score(retrieval_query, k=3)
+
+            for doc, score in query_results:
+                doc_id = doc.metadata.get("id")
+
+                if not doc_id:
+                    doc_id = f"{doc.metadata.get('source', '')}:{doc.metadata.get('page', '')}:{doc.page_content[:50]}"
+
+                if doc_id not in seen_ids:
+                    results.append((doc, score))
+                    seen_ids.add(doc_id)
+
+        results = results[:6]
+
         context_check = check_context_sufficiency(results, route)
 
         if not context_check["is_sufficient"]:
@@ -121,6 +140,7 @@ def query_rag(query_text):
             "sources": [],
             "route": route,
             "rewritten_query": rewritten_query,
+            "planned_queries": planned_queries,
             "context_check": context_check,
         }
 
@@ -158,6 +178,7 @@ def query_rag(query_text):
             "sources": sources,
             "route": route,
             "rewritten_query": rewritten_query,
+            "planned_queries": planned_queries,
             "context_check": context_check,
         }
 
@@ -174,6 +195,13 @@ def print_result(result):
     print(result["answer"])
     print(f"\nRoute: {result.get('route', 'N/A')}")
     print(f"Rewritten query: {result.get('rewritten_query', 'N/A')}")
+    planned_queries = result.get("planned_queries", [])
+
+    if planned_queries:
+        print("\nPlanned retrieval queries:")
+
+    for index, query in enumerate(planned_queries, start=1):
+        print(f"{index}. {query}")
     context_check = result.get("context_check")
 
     if context_check:
